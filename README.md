@@ -153,12 +153,12 @@ Four detection rules tested side by side: the existing system flag, Rule A (exac
 
 ## 📋 Conclusions
 
-1. **The existing detection system is nearly non-functional.** A recall of 0.04% means 99.96% of real fraud passes through undetected. This is not a minor gap - it is a fundamental limitation of a threshold-only approach.
+1. **The existing flag is not just weak - it's broken.** It catches 1 out of 2,699 real fraud cases. That's not a tuning problem, that's a design problem. A single threshold on TRANSFER amount was never going to work.
 
-2. **Fraud is predictable in its location.** It concentrates in just two transaction types. Any monitoring strategy should prioritize CASH_OUT and TRANSFER.
+2. **Fraud concentrates in two transaction types.** TRANSFER and CASH_OUT account for 100% of confirmed fraud in the dataset. Everything else is clean - which means the monitoring scope is much smaller than it looks.
 
-3. **Fraud is continuous, not episodic.** The steady accumulation over 10 days means a one-time audit would miss most of it. Real-time or daily monitoring is necessary.
+3. **Fraud never stops.** No quiet days, no spikes - just a steady accumulation over the entire 10-day period. A periodic review would miss most of it.
 
-4. **Simple rules add meaningful value.** Two straightforward SQL rules - account drain and large cash withdrawals - already produce a focused list of suspicious accounts. This demonstrates that even without machine learning, rule-based logic can significantly improve detection coverage over a naive threshold approach.
+4. **The first version of the account drain rule was essentially noise.** 593,000 alerts at 0.45% precision is not a detection system, it's a false alarm machine. The fix came from actually looking at how fraud transactions behave rather than just setting a balance condition.
 
-5. **One condition changes everything.** Initial testing showed the account drain rule generating 593,000 alerts at 0.45% precision - essentially unusable. Adding a single condition (`AMOUNT = OLD_BALANCE_ORIG`) reduced alerts to ~2,600 while raising precision to 100% and recall to 97.89%. The insight: fraudsters transfer exactly their full balance to the penny. Legitimate customers almost never do this.
+5. **One behavioral pattern identifies almost all fraud.** Fraudsters empty accounts to the exact penny - `AMOUNT = OLD_BALANCE_ORIG`. That single condition cut alerts from 593K to 2,600 and pushed precision to 100% with 97.89% recall. Legitimate customers almost never transfer their entire balance in one transaction.
