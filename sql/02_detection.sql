@@ -90,6 +90,51 @@ SELECT
 FROM vw_suspicious_transactions
 GROUP BY detection_rule;
 
+
+-- Rule comparison - precision and recall for all four rules
+
+
+CREATE OR REPLACE VIEW vw_rule_comparison AS
+SELECT rule_name, total_alerts, confirmed_fraud_caught, precision_pct, recall_pct FROM (
+
+    SELECT 'Existing Flag' AS rule_name,
+        SUM(IS_FLAGGED_FRAUD) AS total_alerts,
+        SUM(CASE WHEN IS_FRAUD=1 AND IS_FLAGGED_FRAUD=1 THEN 1 ELSE 0 END) AS confirmed_fraud_caught,
+        ROUND(SUM(CASE WHEN IS_FRAUD=1 AND IS_FLAGGED_FRAUD=1 THEN 1.0 ELSE 0 END)/NULLIF(SUM(IS_FLAGGED_FRAUD),0)*100,2) AS precision_pct,
+        ROUND(SUM(CASE WHEN IS_FRAUD=1 AND IS_FLAGGED_FRAUD=1 THEN 1.0 ELSE 0 END)/NULLIF(SUM(IS_FRAUD),0)*100,2) AS recall_pct
+    FROM RAW_TRANSACTIONS
+
+    UNION ALL
+
+    SELECT 'Rule A: Exact Balance Transfer',
+        COUNT(*), SUM(IS_FRAUD),
+        ROUND(SUM(IS_FRAUD)/COUNT(*)*100,2),
+        ROUND(SUM(IS_FRAUD)/(SELECT SUM(IS_FRAUD) FROM RAW_TRANSACTIONS)*100,2)
+    FROM RAW_TRANSACTIONS
+    WHERE TYPE IN ('TRANSFER','CASH_OUT') AND AMOUNT=OLD_BALANCE_ORIG AND NEW_BALANCE_ORIG=0 AND OLD_BALANCE_ORIG>0
+
+    UNION ALL
+
+    SELECT 'Rule B: Destination Mismatch',
+        COUNT(*), SUM(IS_FRAUD),
+        ROUND(SUM(IS_FRAUD)/COUNT(*)*100,2),
+        ROUND(SUM(IS_FRAUD)/(SELECT SUM(IS_FRAUD) FROM RAW_TRANSACTIONS)*100,2)
+    FROM RAW_TRANSACTIONS
+    WHERE TYPE='TRANSFER' AND OLD_BALANCE_DEST=0 AND NEW_BALANCE_DEST=0 AND AMOUNT>0
+
+    UNION ALL
+
+    SELECT 'Rule C: Combined',
+        COUNT(*), SUM(IS_FRAUD),
+        ROUND(SUM(IS_FRAUD)/COUNT(*)*100,2),
+        ROUND(SUM(IS_FRAUD)/(SELECT SUM(IS_FRAUD) FROM RAW_TRANSACTIONS)*100,2)
+    FROM RAW_TRANSACTIONS
+    WHERE TYPE IN ('TRANSFER','CASH_OUT') AND AMOUNT=OLD_BALANCE_ORIG AND NEW_BALANCE_ORIG=0
+      AND OLD_BALANCE_DEST=0 AND NEW_BALANCE_DEST=0
+
+) results
+ORDER BY recall_pct DESC;
+
 -- Fraud timeline - hourly step with daily grouping
 -- used for cumulative and daily fraud charts in Power BI
 
