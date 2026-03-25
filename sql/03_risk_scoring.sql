@@ -1,8 +1,3 @@
-USE WAREHOUSE COMPUTE_WH;
-USE DATABASE AML_PROJECT;
-USE SCHEMA COMPLIANCE;
-
-
 -- per-account risk score based on which rules they trigger
 -- account drain = 2pts, high-value cashout = 3pts (larger amounts = higher risk)
 -- HIGH >= 3, MEDIUM = 2
@@ -50,13 +45,6 @@ SELECT
 FROM vw_account_risk
 GROUP BY risk_tier
 ORDER BY avg_risk_score DESC;
-
-
--- top 20 riskiest accounts
-SELECT *
-FROM vw_account_risk
-ORDER BY risk_score DESC
-LIMIT 20;
 
 
 -- cross-check: do HIGH risk accounts actually correspond to fraud?
