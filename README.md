@@ -1,4 +1,4 @@
-# AML Transaction Monitoring — SQL + Power BI
+# 🔍 AML Transaction Monitoring — SQL + Power BI
 
 **Stack:** Snowflake · SQL · Power BI
 **Dataset:** PaySim Synthetic Financial Transactions · 3M rows
@@ -6,7 +6,7 @@
 
 ---
 
-## Project Goal
+## 🎯 Project Goal
 
 The goal of this project was to evaluate the effectiveness of an existing fraud detection system and build a simple rule-based monitoring layer on top of it. The project simulates the kind of work a Compliance Data Analyst would do: ingest transaction data, explore it for patterns, identify weaknesses in the current detection logic, and surface high-risk accounts for investigation.
 
@@ -16,7 +16,7 @@ Two specific objectives:
 
 ---
 
-## Dataset
+## 📂 Dataset
 
 **Source:** [PaySim on Kaggle](https://www.kaggle.com/datasets/ealaxi/paysim1)
 **Reference:** Lopez-Rojas, E., Elmir, A., & Axelsson, S. (2016). *PaySim: A financial mobile money simulator for fraud detection.*
@@ -37,7 +37,7 @@ PaySim simulates 10 days of mobile money transactions from a real mobile payment
 
 ---
 
-## Stack & Setup
+## 🛠️ Stack & Setup
 
 - **Snowflake** — data warehouse (database: `AML_PROJECT`, schema: `COMPLIANCE`, warehouse: `COMPUTE_WH`)
 - **Power BI Desktop** — dashboard connected to Snowflake via native connector
@@ -47,7 +47,7 @@ The dataset was loaded directly into Snowflake as table `RAW_TRANSACTIONS`. No e
 
 ---
 
-## SQL Structure
+## 🗂️ SQL Structure
 
 | File | Purpose |
 |---|---|
@@ -55,7 +55,7 @@ The dataset was loaded directly into Snowflake as table `RAW_TRANSACTIONS`. No e
 | `sql/02_detection.sql` | Two AML detection views + consolidated suspicious transactions view |
 | `sql/03_risk_scoring.sql` | Account-level risk scoring and tier classification |
 
-### Snowflake Views
+### ❄️ Snowflake Views
 
 | View | Description |
 |---|---|
@@ -65,9 +65,14 @@ The dataset was loaded directly into Snowflake as table `RAW_TRANSACTIONS`. No e
 | `vw_account_risk` | Risk score and tier per account (HIGH / MEDIUM) |
 | `vw_fraud_timeline` | Hourly aggregation with cumulative fraud for timeline charts |
 
+**Snowflake schema:**
+
+![Snowflake Tables](screenshots/snowflake_tables.png)
+![Snowflake Views](screenshots/snowflake_views.png)
+
 ---
 
-## Exploratory Analysis
+## 🔎 Exploratory Analysis
 
 The first step was understanding the shape of the data and the baseline performance of the existing system.
 
@@ -81,7 +86,7 @@ The first step was understanding the shape of the data and the baseline performa
 
 ---
 
-## Detection Logic
+## ⚙️ Detection Logic
 
 Two rules were implemented as SQL views to detect suspicious behavior missed by the existing system.
 
@@ -91,7 +96,8 @@ Flags accounts where the full balance is sent out in a single TRANSFER or CASH_O
 **Rule 2 — High-Value CASH_OUT**
 Flags CASH_OUT transactions above $200,000. The existing system monitors large TRANSFER transactions but completely ignores large cash withdrawals. This rule directly fills that blind spot.
 
-**Risk Scoring**
+**📊 Risk Scoring**
+
 Each account is scored based on which rules it triggers:
 
 | Rule | Points |
@@ -100,32 +106,40 @@ Each account is scored based on which rules it triggers:
 | High-Value CASH_OUT | 3 |
 
 Accounts are then classified into two tiers:
-- **HIGH** — score ≥ 3
-- **MEDIUM** — score = 2
+- 🔴 **HIGH** — score ≥ 3
+- 🟠 **MEDIUM** — score = 2
 
 The final query in `03_risk_scoring.sql` cross-checks whether HIGH-tier accounts have a higher confirmed fraud rate than MEDIUM — which validates that the scoring is directionally correct.
 
 ---
 
-## Dashboard — What the Data Shows
+## 📈 Dashboard — What the Data Shows
 
 The Power BI dashboard tells a four-page story.
 
 **Page 1 — The Detection Gap**
 The opening page answers one question directly: how much fraud does the current system actually catch? Out of 2,699 confirmed fraud cases, the system flagged 1. The bar chart makes this gap impossible to miss. This is the core problem the rest of the project responds to.
 
+![Detection Gap](screenshots/1.png)
+
 **Page 2 — Where Fraud Happens**
 Fraud is entirely concentrated in CASH_OUT and TRANSFER. The remaining transaction types are clean. This means a compliance team does not need to monitor all 3 million transactions — focusing on two types makes the problem manageable.
+
+![Where Fraud Happens](screenshots/2.png)
 
 **Page 3 — Fraud Over Time**
 The cumulative fraud chart shows a steady, continuous rise over the 10-day period — no spikes, no quiet periods. Fraud was happening every single hour. The daily count chart confirms there was no day with zero fraud. This reinforces that the problem requires continuous monitoring, not periodic reviews.
 
+![Fraud Over Time](screenshots/3.png)
+
 **Page 4 — Risk Accounts**
 Applying the two detection rules produces a prioritized list of accounts for investigation, classified as HIGH or MEDIUM risk. Instead of reviewing 3 million transactions, a compliance analyst starts from the top of this list.
 
+![Risk Accounts](screenshots/4.png)
+
 ---
 
-## Conclusions
+## 📋 Conclusions
 
 1. **The existing detection system is nearly non-functional.** A recall of 0.04% means 99.96% of real fraud passes through undetected. This is not a minor gap — it is a fundamental limitation of a threshold-only approach.
 
